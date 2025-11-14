@@ -748,7 +748,7 @@ public:
      */
     [[nodiscard]] static std::optional<std::size_t> get_index() noexcept
     {
-        return has_my_index ? my_index : std::optional<std::size_t>{};
+        return my_index;
     }
 
     /**
@@ -758,7 +758,7 @@ public:
      */
     [[nodiscard]] static std::optional<void*> get_pool() noexcept
     {
-        return has_my_pool ? my_pool : std::optional<void*>{};
+        return my_pool;
     }
 
 #ifdef BS_THREAD_POOL_NATIVE_EXTENSIONS
@@ -1116,13 +1116,8 @@ public:
 #endif
 
 private:
-    // Using std::optional for these cases a unresolved external symbol error with msvc2022, so we're using
-    // the has_ variables as a workaround.
-    inline static thread_local std::size_t my_index = std::numeric_limits<std::size_t>::max();
-    inline static thread_local bool has_my_index = false;
-    inline static thread_local void* my_pool = nullptr;
-    inline static thread_local bool has_my_pool = false;
-
+    static thread_local std::optional<std::size_t> my_index;
+    static thread_local std::optional<void*> my_pool;
 }; // class this_thread
 
 /**
@@ -2000,9 +1995,7 @@ private:
     void worker(BS_THREAD_POOL_WORKER_TOKEN const std::size_t idx)
     {
         this_thread::my_pool = this;
-        this_thread::has_my_pool = true;
         this_thread::my_index = idx;
-        this_thread::has_my_index = true;
         init_func(idx);
         while (true)
         {
@@ -2046,8 +2039,8 @@ private:
             }
         }
         cleanup_func(idx);
-        this_thread::has_my_index = false;
-        this_thread::has_my_pool = false;
+        this_thread::my_index = std::nullopt;
+        this_thread::my_pool = std::nullopt;
     }
 
     // ============
